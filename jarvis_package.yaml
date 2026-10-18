@@ -28,10 +28,14 @@ secrets:
   - key: COMFYUI_URL
     scope: integration
     value_type: string
+    required: true
+    friendly_name: "ComfyUI URL"
     description: "Your ComfyUI server's address, e.g. http://192.168.1.50:8188 or a hosted ComfyUI URL"
     is_sensitive: false
   - key: COMFYUI_API_KEY
     scope: integration
     value_type: string
+    required: false
+    friendly_name: "API key"
     description: "API key for a hosted ComfyUI (sent as X-API-Key and as a Bearer token). Leave empty for a server on your network."
     is_sensitive: true

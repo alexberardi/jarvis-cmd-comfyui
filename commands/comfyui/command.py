@@ -209,6 +209,12 @@ class ComfyUICommand(IJarvisCommand):
             caps = capabilities.load(client)
         except ComfyError as e:
             return CommandResponse.error_response(describe_request_error(e, client.base_url))
+        if not caps["modes"][mode].get("ok"):
+            # The cached answer may predate a model install: re-read once before refusing.
+            try:
+                caps = capabilities.load(client, refresh=True)
+            except ComfyError as e:
+                return CommandResponse.error_response(describe_request_error(e, client.base_url))
         mode_caps = caps["modes"][mode]
         if not mode_caps.get("ok"):
             others = [m for m in _offered(caps) if m != mode]

@@ -35,8 +35,9 @@ An older node still gets an "it's ready" item, without the file.
 ## What your ComfyUI needs
 
 On first use the package reads `/object_info` and `/models` and offers only
-what the server can do (re-read every 6 hours, or when a model it picked is
-gone):
+what the server can do (re-read every 6 hours, when a model it picked is
+gone, and before saying a mode isn't available, so a model you just installed
+is picked up at once):
 
 | Mode | Models | Nodes |
 |---|---|---|

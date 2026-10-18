@@ -55,6 +55,7 @@ class FakeComfyUI:
         self.models: dict[str, list[str]] = {k: list(v) for k, v in FULL_MODELS.items()}
         self.has_models_endpoint = True
         self.required_key: str | None = None
+        self.drop_view = 0  # drop the next N /view connections without an answer
         self.history: dict[str, dict[str, Any] | None] = {}
         self.files: dict[tuple[str, str], bytes] = {}
         self.requests: list[dict[str, Any]] = []
@@ -196,6 +197,10 @@ class FakeComfyUI:
                     prompt_id = unquote(path[len("/history/"):])
                     entry = fake.history.get(prompt_id)
                     return self._send(200, {prompt_id: entry} if entry else {})
+                if method == "GET" and path == "/view" and fake.drop_view:
+                    fake.drop_view -= 1
+                    self.close_connection = True
+                    return None
                 if method == "GET" and path == "/view":
                     q = {k: v[0] for k, v in parse_qs(parsed.query, keep_blank_values=True).items()}
                     data = fake.files.get((q.get("subfolder", ""), q.get("filename", "")))

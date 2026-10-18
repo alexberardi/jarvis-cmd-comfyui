@@ -97,6 +97,19 @@ def test_wrong_key_fails_at_once(server, inbox):
     assert "refused the API key" in inbox.posts[0]["summary"]
 
 
+def test_download_unreachable_retried_next_tick(server, inbox):
+    _job()
+    server.finish("p1", "v.mp4", MP4)
+    server.drop_view = 1
+    _tick()
+    assert inbox.posts == [] and len(all_jobs()) == 1
+    _tick(NOW + timedelta(seconds=15))
+    [post] = inbox.posts
+    assert post["title"] != "Couldn't make your video"
+    assert post["attachments"][0].data == MP4
+    assert all_jobs() == []
+
+
 def test_household_when_no_user(server, inbox):
     _job(user_id=None)
     server.finish("p1", "v.mp4", MP4)

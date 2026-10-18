@@ -138,6 +138,15 @@ class TestOnlyWhatTheServerCanDo:
         assert "no Wan text-to-video model" in msg and "It can make pictures." in msg
         assert ready.prompts == []
 
+    def test_model_installed_after_a_no_is_picked_up(self, ready):
+        wan = ready.models["diffusion_models"]
+        ready.models["diffusion_models"] = []
+        assert "no Wan text-to-video model" in _message(_run(mode="video", prompt="a fox"))
+        ready.models["diffusion_models"] = wan  # the user installs the model
+        resp = _run(mode="video", prompt="a fox")
+        assert resp.success and "inbox when it's ready" in _message(resp)
+        assert len(ready.prompts) == 1 and len(all_jobs()) == 1
+
     def test_capabilities_read_once(self, ready):
         _run(mode="video", prompt="a")
         _run(mode="video", prompt="b")

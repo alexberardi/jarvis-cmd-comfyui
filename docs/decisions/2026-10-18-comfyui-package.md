@@ -36,6 +36,8 @@ This is piece 5: the package.
 4. **Capabilities from `/object_info` + `/models`**, cached in
    `JarvisStorage("comfyui_state")` for 6 hours per URL; dropped when `/prompt`
    says a picked model is not in its list, so the next request re-reads.
+   Before refusing a mode the cache says is unavailable, the command re-reads
+   the server once, so a model installed after a "no" works straight away.
    Servers without `/models` fall back to the loader nodes' combo lists in
    `/object_info` (both the old `[[...]]` and the `["COMBO", {"options"}]` shapes).
    A mode is offered only when its nodes and models are there; otherwise the
