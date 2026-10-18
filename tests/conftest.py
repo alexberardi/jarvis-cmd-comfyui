@@ -131,11 +131,16 @@ def llm():
     set_llm_backend(prev)
 
 
-@pytest.fixture
-def comfy(monkeypatch):
-    # The client honours *_proxy env vars like any urllib caller; the fake is local.
+@pytest.fixture(autouse=True)
+def _no_proxy(monkeypatch):
+    # The client honours *_proxy env vars like any urllib caller; every server in
+    # the tests (the fake, or a closed port for "server down") is on 127.0.0.1.
     for var in ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"):
         monkeypatch.delenv(var, raising=False)
+
+
+@pytest.fixture
+def comfy():
     server = FakeComfyUI().start()
     yield server
     server.stop()
