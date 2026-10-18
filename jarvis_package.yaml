@@ -1,0 +1,37 @@
+name: "comfyui"
+display_name: "ComfyUI"
+description: "Make short videos and pictures with your own ComfyUI (your GPU box or a hosted ComfyUI) and get them in your inbox: text to video and photo to video with Wan 2.x, text to image with any checkpoint. Only what your server can do is offered."
+version: "0.1.0"
+min_jarvis_version: "0.1.115"
+# SDK 0.13.0 adds inbox attachments (JarvisInbox.post(attachments=[Attachment(...)])).
+# An older node backend gets a text-only "it's ready" item instead.
+min_sdk_version: "0.13.0"
+license: "Apache-2.0"
+author:
+  github: "alexberardi"
+categories: ["entertainment", "media"]
+platforms: ["darwin", "linux"]
+keywords: ["comfyui", "video", "image", "picture", "animate", "generate", "wan", "stable diffusion"]
+
+components:
+  - type: command
+    name: comfyui
+    path: commands/comfyui/command.py
+  - type: agent
+    name: comfyui_jobs
+    path: agents/comfyui_jobs/agent.py
+
+# stdlib HTTP (urllib) only.
+packages: []
+
+secrets:
+  - key: COMFYUI_URL
+    scope: integration
+    value_type: string
+    description: "Your ComfyUI server's address, e.g. http://192.168.1.50:8188 or a hosted ComfyUI URL"
+    is_sensitive: false
+  - key: COMFYUI_API_KEY
+    scope: integration
+    value_type: string
+    description: "API key for a hosted ComfyUI (sent as X-API-Key and as a Bearer token). Leave empty for a server on your network."
+    is_sensitive: true
