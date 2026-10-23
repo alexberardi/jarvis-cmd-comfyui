@@ -2,7 +2,9 @@
 queues the right workflow, saves a job, and the agent's next tick delivers the
 result to the inbox."""
 
+import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 from jarvis_command_sdk import JarvisImage, RequestInformation
@@ -205,3 +207,39 @@ def test_execute_without_url_is_missing_secret(ready):
 
     with pytest.raises(MissingSecretsError):
         ComfyUICommand().execute(_req(), secrets={}, mode="video", prompt="a fox")
+
+
+GGUF_SERVER = json.loads((Path(__file__).parent / "fixtures" / "gguf_server.json").read_text())
+
+
+class TestGGUFServer:
+    """A ComfyUI with ComfyUI-GGUF and only GGUF Wan models (tests/fixtures/gguf_server.json)."""
+
+    @pytest.fixture
+    def gguf(self, ready):
+        ready.load_server(GGUF_SERVER)
+        return ready
+
+    def test_text_to_video_with_gguf_wan(self, gguf, inbox):
+        resp = _run(mode="video", prompt="a fox running through snow")
+        assert resp.success, _message(resp)
+        [wf] = gguf.prompts  # the fake accepted it: every node exists, every file is listed
+        assert wf["1"] == {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": "wan2.1-t2v-14b-Q5_K_S.gguf"}}
+        assert _node(wf, "CLIPLoader")["clip_name"] == "umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+        assert _node(wf, "VAELoader")["vae_name"] == "wan_2.1_vae.safetensors"
+        gguf.finish("p1", "video_00001_.mp4", MP4)
+        _tick()
+        [post] = inbox.posts
+        assert post["title"] == "Your video is ready"
+
+    def test_image_to_video_with_gguf_wan(self, gguf):
+        resp = _run(mode="animate", prompt="it waves", photos=[JarvisImage(png_photo(640, 480))])
+        assert resp.success, _message(resp)
+        [wf] = gguf.prompts
+        assert _node(wf, "UnetLoaderGGUF")["unet_name"] == "wan22RemixT2VI2V_i2vHighV30-Q6_K.gguf"
+        assert _node(wf, "CLIPVisionLoader")["clip_name"] == "clip_vision_h.safetensors"
+
+    def test_no_picture_model_offers_videos(self, gguf):
+        msg = _message(_run(mode="image", prompt="a fox"))
+        assert "no image model" in msg and "video" in msg.split("no image model", 1)[1]
+        assert gguf.prompts == []

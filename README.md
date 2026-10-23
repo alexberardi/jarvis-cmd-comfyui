@@ -41,13 +41,18 @@ is picked up at once):
 
 | Mode | Models | Nodes |
 |---|---|---|
-| text to video | a Wan `*t2v*` model in `diffusion_models`, a `umt5` text encoder, a Wan VAE | core Wan nodes + `CreateVideo`/`SaveVideo` |
+| text to video | a Wan `*t2v*` model in `diffusion_models` (or a GGUF one in `unet_gguf`, see below), a `umt5` text encoder, a Wan VAE | core Wan nodes + `CreateVideo`/`SaveVideo` |
 | photo to video | a Wan `*i2v*` model, the same encoder and VAE (`clip_vision_h` used if present) | + `WanImageToVideo` |
 | text to image | any checkpoint in `checkpoints` | core |
 
 Videos are 1–5 s (default 3) at 16 fps, 832×480 landscape (or portrait/square),
 saved as mp4. Wan 2.2's two-part (high/low noise) 14B models and the 5B
 `ti2v` model are not driven yet.
+
+GGUF-quantized Wan models (how most people fit the 14B model on a 24 GB card)
+work when [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) is installed:
+they are read from `/models/unet_gguf` and loaded with `UnetLoaderGGUF`. A
+`.safetensors` model in `diffusion_models` is preferred when both are there.
 
 ## Components
 

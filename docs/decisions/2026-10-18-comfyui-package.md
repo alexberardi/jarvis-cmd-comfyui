@@ -49,6 +49,16 @@ This is piece 5: the package.
    1024 otherwise). Wan 2.2's two-part high/low-noise 14B models and the 5B
    `ti2v` model are **not driven in v1** (they need different graphs); the reply
    says so instead of making a bad video.
+   **GGUF Wan (2026-10-22, #516)**: with ComfyUI-GGUF's `UnetLoaderGGUF` in
+   `/object_info`, `unet_gguf` is read too and searched after diffusion_models
+   (safetensors first, the least surprising pick). A `.gguf` model gets
+   `UnetLoaderGGUF` (only `unet_name`) as the template's node "1"; the choice is
+   made from the file extension at build time, so capabilities cached before
+   this change still build. The text encoder stays on `CLIPLoader` (GGUF
+   encoders are not read). A tag only counts as a word start when names hold
+   both (`wan22RemixT2VI2V_i2vHighV30` is image-to-video). Unknown: whether
+   "Remix ...High" files are high-noise halves of a two-part model, which
+   `_is_moe_half` (only `high_noise`/`low_noise`) would not catch.
 6. **Templates** are ComfyUI API-format JSON in `comfyui_shared/workflows/`
    (`wan_t2v`, `wan_i2v`, `sd_t2i`), core nodes only. Placeholders are whole
    string values (`"{{seed}}"`) replaced by typed values, so a template can be

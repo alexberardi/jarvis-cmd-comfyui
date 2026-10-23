@@ -3,7 +3,8 @@
 Three modes, each offered only when the server has what its workflow needs:
 
 - ``video``   text to video: a Wan 2.x text-to-video model (``*t2v*`` in
-              diffusion_models), a umt5 text encoder and a Wan VAE.
+              diffusion_models, or a GGUF one in unet_gguf when ComfyUI-GGUF's
+              ``UnetLoaderGGUF`` is installed), a umt5 text encoder and a Wan VAE.
 - ``animate`` image to video: a Wan 2.x image-to-video model (``*i2v*``), the
               same encoder and VAE, and the ``WanImageToVideo`` node. A CLIP
               vision model (``clip_vision_h``) is used when there is one.
@@ -17,6 +18,7 @@ the user.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -41,10 +43,15 @@ REQUIRED_NODES: dict[str, tuple[str, ...]] = {
     "image": ("CheckpointLoaderSimple", "CLIPTextEncode", "EmptyLatentImage", "KSampler", "VAEDecode", "SaveImage"),
 }
 
+# ComfyUI-GGUF's loader for quantized diffusion models (folder unet_gguf). UNETLoader
+# can't read .gguf files; workflows.build swaps the loader node for them.
+GGUF_LOADER = "UnetLoaderGGUF"
+
 # Model folders (current name first, then the legacy alias) and, for servers
 # without the /models endpoint, the loader input that lists the same files.
 _FOLDERS: dict[str, tuple[tuple[str, ...], tuple[str, str]]] = {
     "diffusion_models": (("diffusion_models", "unet"), ("UNETLoader", "unet_name")),
+    "unet_gguf": (("unet_gguf",), (GGUF_LOADER, "unet_name")),
     "text_encoders": (("text_encoders", "clip"), ("CLIPLoader", "clip_name")),
     "vae": (("vae",), ("VAELoader", "vae_name")),
     "clip_vision": (("clip_vision",), ("CLIPVisionLoader", "clip_name")),
@@ -82,6 +89,9 @@ def fetch_models(client: ComfyClient, object_info: dict[str, Any]) -> dict[str, 
         available = None
     out: dict[str, list[str]] = {}
     for key, (folders, (node, field)) in _FOLDERS.items():
+        if node == GGUF_LOADER and node not in object_info:
+            out[key] = []  # without ComfyUI-GGUF these files can't be loaded
+            continue
         if available is None:
             out[key] = _from_object_info(object_info, node, field)
             continue
@@ -102,11 +112,20 @@ def _is_moe_half(name: str) -> bool:
     return "high_noise" in low or "low_noise" in low
 
 
+def _tag_starts_word(name: str, tag: str) -> bool:
+    """``tag`` at the start of a word: "wan2.1-t2v-14b", "..._t2vHigh", not "RemixT2VI2V"."""
+    return re.search(rf"(^|[^a-z0-9]){tag}", _low(name)) is not None
+
+
 def _pick_wan(files: list[str], tag: str) -> tuple[str | None, bool]:
-    """(model, only_moe): the first single-file Wan model with ``tag`` in its name."""
+    """(model, only_moe): the first single-file Wan model with ``tag`` in its name.
+
+    Names like "wan22RemixT2VI2V_i2vHigh..." hold both tags, so a tag that starts a
+    word wins over one buried in a longer word.
+    """
     tagged = [f for f in files if tag in _low(f) and "ti2v" not in _low(f)]
     single = [f for f in tagged if not _is_moe_half(f)]
-    single.sort(key=lambda f: (0 if "wan" in _low(f) else 1, _low(f)))
+    single.sort(key=lambda f: (0 if _tag_starts_word(f, tag) else 1, 0 if "wan" in _low(f) else 1, _low(f)))
     return (single[0] if single else None), bool(tagged) and not single
 
 
@@ -155,7 +174,11 @@ def _video_mode(object_info: dict[str, Any], models: dict[str, list[str]], mode:
     if missing:
         return {"ok": False, "reason": _missing_nodes_reason(missing)}
     tag, what = ("t2v", "text-to-video") if mode == "video" else ("i2v", "image-to-video")
+    # Full-precision files first; GGUF (ComfyUI-GGUF) when that's all there is.
     unet, only_moe = _pick_wan(models["diffusion_models"], tag)
+    if unet is None:
+        unet, gguf_only_moe = _pick_wan(models.get("unet_gguf") or [], tag)
+        only_moe = only_moe or gguf_only_moe
     if unet is None:
         if only_moe:
             return {"ok": False, "reason": (
@@ -163,7 +186,8 @@ def _video_mode(object_info: dict[str, Any], models: dict[str, list[str]], mode:
                 "which I can't drive yet. A single-file Wan model would work."
             )}
         return {"ok": False, "reason": (
-            f"Your ComfyUI has no Wan {what} model (a file with '{tag}' in its name in models/diffusion_models)."
+            f"Your ComfyUI has no Wan {what} model (a file with '{tag}' in its name in models/diffusion_models, "
+            "or a GGUF one in models/unet with ComfyUI-GGUF installed)."
         )}
     encoder = _pick_encoder(models["text_encoders"])
     if encoder is None:

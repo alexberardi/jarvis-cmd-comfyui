@@ -1,0 +1,83 @@
+{
+  "_about": "Hand-written, NOT a recording: the shape of a ComfyUI 0.17.0 server with ComfyUI-GGUF installed and only GGUF Wan models (item #516). Model names are the ones reported from the real box; node inputs follow ComfyUI's and ComfyUI-GGUF's INPUT_TYPES. object_info is trimmed to the nodes the package reads or submits.",
+  "models": {
+    "checkpoints": [],
+    "clip": ["umt5_xxl_fp8_e4m3fn_scaled.safetensors"],
+    "clip_gguf": [],
+    "clip_vision": ["clip_vision_h.safetensors"],
+    "diffusion_models": [],
+    "loras": [],
+    "text_encoders": ["umt5_xxl_fp8_e4m3fn_scaled.safetensors"],
+    "unet_gguf": [
+      "wan2.1-t2v-14b-Q5_K_S.gguf",
+      "wan22RemixT2VI2V_i2vHighV30-Q6_K.gguf",
+      "wan22RemixT2VI2V_t2vHighV20-Q6_K.gguf"
+    ],
+    "vae": ["wan_2.1_vae.safetensors"]
+  },
+  "object_info": {
+    "UNETLoader": {
+      "input": {"required": {
+        "unet_name": [[]],
+        "weight_dtype": [["default", "fp8_e4m3fn", "fp8_e4m3fn_fast", "fp8_e5m2"]]
+      }},
+      "input_order": {"required": ["unet_name", "weight_dtype"]},
+      "output": ["MODEL"], "output_is_list": [false], "output_name": ["MODEL"],
+      "name": "UNETLoader", "display_name": "Load Diffusion Model", "description": "",
+      "python_module": "nodes", "category": "advanced/loaders", "output_node": false
+    },
+    "UnetLoaderGGUF": {
+      "input": {"required": {
+        "unet_name": [["wan2.1-t2v-14b-Q5_K_S.gguf", "wan22RemixT2VI2V_i2vHighV30-Q6_K.gguf", "wan22RemixT2VI2V_t2vHighV20-Q6_K.gguf"]]
+      }},
+      "input_order": {"required": ["unet_name"]},
+      "output": ["MODEL"], "output_is_list": [false], "output_name": ["MODEL"],
+      "name": "UnetLoaderGGUF", "display_name": "Unet Loader (GGUF)", "description": "",
+      "python_module": "custom_nodes.ComfyUI-GGUF", "category": "bootleg", "output_node": false
+    },
+    "CLIPLoaderGGUF": {
+      "input": {"required": {
+        "clip_name": [["umt5_xxl_fp8_e4m3fn_scaled.safetensors"]],
+        "type": [["stable_diffusion", "stable_cascade", "sd3", "stable_audio", "mochi", "ltxv", "pixart", "cosmos", "lumina2", "wan", "hidream", "chroma", "ace"]]
+      }},
+      "input_order": {"required": ["clip_name", "type"]},
+      "output": ["CLIP"], "output_is_list": [false], "output_name": ["CLIP"],
+      "name": "CLIPLoaderGGUF", "display_name": "CLIPLoader (GGUF)", "description": "",
+      "python_module": "custom_nodes.ComfyUI-GGUF", "category": "bootleg", "output_node": false
+    },
+    "CLIPLoader": {
+      "input": {"required": {
+        "clip_name": [["umt5_xxl_fp8_e4m3fn_scaled.safetensors"]],
+        "type": [["stable_diffusion", "stable_cascade", "sd3", "stable_audio", "mochi", "ltxv", "pixart", "cosmos", "lumina2", "wan", "hidream", "chroma", "ace"]]
+      }, "optional": {"device": [["default", "cpu"], {"advanced": true}]}},
+      "input_order": {"required": ["clip_name", "type"], "optional": ["device"]},
+      "output": ["CLIP"], "output_is_list": [false], "output_name": ["CLIP"],
+      "name": "CLIPLoader", "display_name": "Load CLIP", "description": "",
+      "python_module": "nodes", "category": "advanced/loaders", "output_node": false
+    },
+    "VAELoader": {
+      "input": {"required": {"vae_name": [["wan_2.1_vae.safetensors"]]}},
+      "output": ["VAE"], "name": "VAELoader", "python_module": "nodes", "category": "loaders", "output_node": false
+    },
+    "CLIPVisionLoader": {
+      "input": {"required": {"clip_name": [["clip_vision_h.safetensors"]]}},
+      "output": ["CLIP_VISION"], "name": "CLIPVisionLoader", "python_module": "nodes", "category": "loaders", "output_node": false
+    },
+    "CheckpointLoaderSimple": {
+      "input": {"required": {"ckpt_name": [[]]}},
+      "output": ["MODEL", "CLIP", "VAE"], "name": "CheckpointLoaderSimple", "python_module": "nodes", "category": "loaders", "output_node": false
+    },
+    "CLIPVisionEncode": {"input": {"required": {"clip_vision": ["CLIP_VISION"], "image": ["IMAGE"], "crop": [["center", "none"]]}}, "name": "CLIPVisionEncode", "python_module": "nodes"},
+    "ModelSamplingSD3": {"input": {"required": {"model": ["MODEL"], "shift": ["FLOAT", {"default": 3.0}]}}, "name": "ModelSamplingSD3", "python_module": "comfy_extras.nodes_model_advanced"},
+    "CLIPTextEncode": {"input": {"required": {"text": ["STRING", {"multiline": true}], "clip": ["CLIP"]}}, "name": "CLIPTextEncode", "python_module": "nodes"},
+    "KSampler": {"input": {"required": {"model": ["MODEL"], "seed": ["INT", {}], "steps": ["INT", {}], "cfg": ["FLOAT", {}], "sampler_name": [["euler", "uni_pc"]], "scheduler": [["simple", "normal"]], "positive": ["CONDITIONING"], "negative": ["CONDITIONING"], "latent_image": ["LATENT"], "denoise": ["FLOAT", {}]}}, "name": "KSampler", "python_module": "nodes"},
+    "VAEDecode": {"input": {"required": {"samples": ["LATENT"], "vae": ["VAE"]}}, "name": "VAEDecode", "python_module": "nodes"},
+    "EmptyHunyuanLatentVideo": {"input": {"required": {"width": ["INT", {}], "height": ["INT", {}], "length": ["INT", {}], "batch_size": ["INT", {}]}}, "name": "EmptyHunyuanLatentVideo", "python_module": "comfy_extras.nodes_hunyuan"},
+    "LoadImage": {"input": {"required": {"image": [[], {"image_upload": true}]}}, "name": "LoadImage", "python_module": "nodes"},
+    "WanImageToVideo": {"input": {"required": {"positive": ["CONDITIONING"], "negative": ["CONDITIONING"], "vae": ["VAE"], "width": ["INT", {}], "height": ["INT", {}], "length": ["INT", {}], "batch_size": ["INT", {}]}, "optional": {"clip_vision_output": ["CLIP_VISION_OUTPUT"], "start_image": ["IMAGE"]}}, "name": "WanImageToVideo", "python_module": "comfy_extras.nodes_wan"},
+    "CreateVideo": {"input": {"required": {"images": ["IMAGE"], "fps": ["FLOAT", {}]}, "optional": {"audio": ["AUDIO"]}}, "name": "CreateVideo", "python_module": "comfy_extras.nodes_video"},
+    "SaveVideo": {"input": {"required": {"video": ["VIDEO"], "filename_prefix": ["STRING", {}], "format": ["COMBO", {"options": ["auto", "mp4"]}], "codec": ["COMBO", {"options": ["auto", "h264"]}]}}, "name": "SaveVideo", "python_module": "comfy_extras.nodes_video", "output_node": true},
+    "EmptyLatentImage": {"input": {"required": {"width": ["INT", {}], "height": ["INT", {}], "batch_size": ["INT", {}]}}, "name": "EmptyLatentImage", "python_module": "nodes"},
+    "SaveImage": {"input": {"required": {"images": ["IMAGE"], "filename_prefix": ["STRING", {}]}}, "name": "SaveImage", "python_module": "nodes", "output_node": true}
+  }
+}

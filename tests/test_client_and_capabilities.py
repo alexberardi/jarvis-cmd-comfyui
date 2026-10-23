@@ -107,6 +107,61 @@ class TestDetect:
         assert capabilities._combo_options([["b.safetensors"], {}]) == ["b.safetensors"]
 
 
+GGUF_WAN = [
+    "wan2.1-t2v-14b-Q5_K_S.gguf",
+    "wan22RemixT2VI2V_t2vHighV20-Q6_K.gguf",
+    "wan22RemixT2VI2V_i2vHighV30-Q6_K.gguf",
+]
+
+
+class TestGGUF:
+    """Wan models quantized to GGUF, loaded by ComfyUI-GGUF's UnetLoaderGGUF (models/unet_gguf)."""
+
+    def _gguf_only(self, comfy, files=GGUF_WAN):
+        comfy.models["diffusion_models"] = []
+        comfy.models["unet_gguf"] = list(files)
+        comfy.nodes += ["UnetLoaderGGUF", "CLIPLoaderGGUF"]
+
+    def test_gguf_only_server_makes_videos(self, comfy):
+        self._gguf_only(comfy)
+        modes = capabilities.detect(ComfyClient(comfy.url))["modes"]
+        assert modes["video"]["ok"], modes["video"]
+        assert modes["video"]["models"]["unet_name"] == "wan2.1-t2v-14b-Q5_K_S.gguf"
+        assert modes["animate"]["models"]["unet_name"] == "wan22RemixT2VI2V_i2vHighV30-Q6_K.gguf"
+        assert "/models/unet_gguf" in comfy.paths()
+
+    def test_tag_matched_as_a_word_not_inside_t2vi2v(self, comfy):
+        # "wan22RemixT2VI2V_..." holds both tags; the one after "_" says what the file is.
+        self._gguf_only(comfy, GGUF_WAN[1:])
+        modes = capabilities.detect(ComfyClient(comfy.url))["modes"]
+        assert modes["video"]["models"]["unet_name"] == "wan22RemixT2VI2V_t2vHighV20-Q6_K.gguf"
+        assert modes["animate"]["models"]["unet_name"] == "wan22RemixT2VI2V_i2vHighV30-Q6_K.gguf"
+
+    def test_safetensors_preferred_over_gguf(self, comfy):
+        comfy.models["unet_gguf"] = list(GGUF_WAN)
+        comfy.nodes += ["UnetLoaderGGUF"]
+        modes = capabilities.detect(ComfyClient(comfy.url))["modes"]
+        assert modes["video"]["models"]["unet_name"] == "wan2.1_t2v_1.3B_fp16.safetensors"
+
+    def test_gguf_ignored_without_the_gguf_loader(self, comfy):
+        comfy.models["diffusion_models"] = []
+        comfy.models["unet_gguf"] = list(GGUF_WAN)
+        modes = capabilities.detect(ComfyClient(comfy.url))["modes"]
+        assert not modes["video"]["ok"]
+        assert "/models/unet_gguf" not in comfy.paths()
+
+    def test_no_wan_reason_names_both_folders(self, comfy):
+        self._gguf_only(comfy, [])
+        reason = capabilities.detect(ComfyClient(comfy.url))["modes"]["video"]["reason"]
+        assert "models/diffusion_models" in reason and "GGUF" in reason
+
+    def test_old_server_without_models_endpoint(self, comfy):
+        self._gguf_only(comfy)
+        comfy.has_models_endpoint = False
+        modes = capabilities.detect(ComfyClient(comfy.url))["modes"]
+        assert modes["video"]["models"]["unet_name"] == "wan2.1-t2v-14b-Q5_K_S.gguf"
+
+
 class TestCache:
     def test_cached_after_first_use(self, backend, comfy):
         client = ComfyClient(comfy.url)
