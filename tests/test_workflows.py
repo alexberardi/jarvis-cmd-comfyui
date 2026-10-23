@@ -45,6 +45,23 @@ def test_animate_without_clip_vision_drops_branch():
     assert "clip_vision_output" not in i2v and i2v["start_image"] == ["12", 0]
 
 
+@pytest.mark.parametrize("mode", ["video", "animate"])
+def test_gguf_model_loaded_with_unet_loader_gguf(mode):
+    wf = workflows.build(
+        mode, {**MODELS[mode], "unet_name": "wan2.1-t2v-14b-Q5_K_S.gguf"}, prompt="p", seed=1,
+        width=832, height=480, length=49, image="in.png" if mode == "animate" else None,
+    )
+    # UnetLoaderGGUF (ComfyUI-GGUF) takes only unet_name; UNETLoader can't read .gguf.
+    assert wf["1"] == {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": "wan2.1-t2v-14b-Q5_K_S.gguf"}}
+    assert not any(n["class_type"] == "UNETLoader" for n in wf.values())
+    assert "{{" not in json.dumps(wf)
+
+
+def test_safetensors_model_keeps_unet_loader():
+    wf = workflows.build("video", VIDEO_MODELS, prompt="p", seed=1, width=832, height=480, length=49)
+    assert wf["1"]["class_type"] == "UNETLoader" and wf["1"]["inputs"]["weight_dtype"] == "default"
+
+
 def test_missing_value_raises():
     with pytest.raises(KeyError):
         workflows.fill({"a": "{{nope}}"}, {})

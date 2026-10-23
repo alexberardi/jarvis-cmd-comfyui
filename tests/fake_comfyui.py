@@ -42,6 +42,7 @@ FULL_MODELS: dict[str, list[str]] = {
 # loader class -> (input name, model folder)
 _LOADERS = {
     "UNETLoader": ("unet_name", "diffusion_models"),
+    "UnetLoaderGGUF": ("unet_name", "unet_gguf"),  # ComfyUI-GGUF
     "CLIPLoader": ("clip_name", "text_encoders"),
     "VAELoader": ("vae_name", "vae"),
     "CLIPVisionLoader": ("clip_name", "clip_vision"),
@@ -54,6 +55,7 @@ class FakeComfyUI:
         self.nodes: list[str] = list(ALL_NODES)
         self.models: dict[str, list[str]] = {k: list(v) for k, v in FULL_MODELS.items()}
         self.has_models_endpoint = True
+        self.recorded_object_info: dict[str, Any] | None = None
         self.required_key: str | None = None
         self.drop_view = 0  # drop the next N /view connections without an answer
         self.history: dict[str, dict[str, Any] | None] = {}
@@ -82,7 +84,15 @@ class FakeComfyUI:
 
     # ── Test controls ─────────────────────────────────────────────────
 
+    def load_server(self, server: dict[str, Any]) -> None:
+        """Serve a server's ``object_info`` and ``models`` (tests/fixtures/*.json) as they are."""
+        self.recorded_object_info = server["object_info"]
+        self.nodes = list(server["object_info"])
+        self.models = {k: list(v) for k, v in server["models"].items()}
+
     def object_info(self) -> dict[str, Any]:
+        if self.recorded_object_info is not None:
+            return self.recorded_object_info
         info: dict[str, Any] = {n: {"input": {"required": {}}} for n in self.nodes}
         for node, (field, folder) in _LOADERS.items():
             if node in info:

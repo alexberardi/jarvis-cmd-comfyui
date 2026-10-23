@@ -16,6 +16,11 @@ from typing import Any
 TEMPLATE_DIR = Path(__file__).parent / "workflows"
 TEMPLATES = {"video": "wan_t2v.json", "animate": "wan_i2v.json", "image": "sd_t2i.json"}
 
+# The Wan templates' model loader, and its stand-in for GGUF files (ComfyUI-GGUF),
+# which takes no weight_dtype.
+UNET_NODE = "1"
+GGUF_LOADER = "UnetLoaderGGUF"
+
 # The i2v template's CLIP-vision branch, dropped when the server has no CLIP vision model.
 CLIP_VISION_NODES = ("13", "14")
 
@@ -96,6 +101,8 @@ def build(
     template = load_template(mode)
     if mode == "animate" and not models.get("clip_vision_name"):
         template = drop_nodes(template, CLIP_VISION_NODES)
+    if str(models.get("unet_name") or "").lower().endswith(".gguf"):
+        template[UNET_NODE] = {"class_type": GGUF_LOADER, "inputs": {"unet_name": "{{unet_name}}"}}
     values: dict[str, Any] = {
         **{k: v for k, v in models.items() if v is not None},
         "prompt": prompt,
