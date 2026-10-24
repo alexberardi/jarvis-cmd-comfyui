@@ -1,7 +1,7 @@
 name: "comfyui"
 display_name: "ComfyUI"
 description: "Make short videos and pictures with your own ComfyUI (your GPU box or a hosted ComfyUI) and get them in your inbox: text to video and photo to video with Wan 2.x, text to image with any checkpoint. Only what your server can do is offered."
-version: "0.1.0"
+version: "0.1.1"
 min_jarvis_version: "0.1.115"
 # SDK 0.13.0 adds inbox attachments (JarvisInbox.post(attachments=[Attachment(...)])).
 # An older node backend gets a text-only "it's ready" item instead.
